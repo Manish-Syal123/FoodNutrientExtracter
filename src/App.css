@@ -1,0 +1,185 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  background: #f0f4f8;
+  color: #333;
+  line-height: 1.6;
+}
+h2 {
+  font-size: 2.5em;
+  margin: 0;
+  color: #22cf1f;
+}
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.upload-section {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.file-input {
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: white;
+}
+
+.analyze-btn {
+  min-width: 120px;
+}
+
+.analyze-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.preview-section {
+  width: 100%;
+  max-width: 400px;
+  margin: 1rem auto;
+}
+
+.preview-image {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.error-message {
+  color: #ef4444;
+  padding: 0.5rem 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 4px;
+  margin: 1rem 0;
+}
+
+.result-section {
+  width: 100%;
+  max-width: 600px;
+  margin: 1rem auto;
+}
+
+.results-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.result-item {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.label {
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+.score {
+  color: #10b981;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+.nutrients-section {
+  margin: 20px 0;
+  text-align: center;
+}
+
+.nutrients-btn {
+  background-color: #4caf50;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.nutrients-btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.nutrients-table {
+  margin: 20px auto;
+  max-width: 600px;
+}
+
+.nutrients-table table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.nutrients-table th,
+.nutrients-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.nutrients-table th {
+  background-color: #f5f5f5;
+  font-weight: bold;
+}
+
+.nutrients-table tr:hover {
+  background-color: #f9f9f9;
+}
