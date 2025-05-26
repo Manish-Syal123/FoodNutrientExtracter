@@ -3,7 +3,7 @@ import axios from "axios";
 
 const USDA_API_KEY = import.meta.env.VITE_USDA_API_KEY;
 
-const NutrientExtractor = ({ foodData }) => {
+const NutrientExtractor = ({ foodData, setFoodNutrients }) => {
   const [nutrients, setNutrients] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -80,6 +80,8 @@ const NutrientExtractor = ({ foodData }) => {
         };
 
         setNutrients(nutrientData);
+        setFoodNutrients(nutrientData); // Pass nutrients to parent component
+        console.log("Nutrient data extracted:", nutrientData);
       }
     } catch (err) {
       setError(err.message);

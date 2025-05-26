@@ -2,11 +2,15 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import ImageAnalyzer from "./components/ImageAnalyzer";
 import NutrientExtractor from "./components/NutrientExtractor";
+import ChatBot from "./components/ChatBot";
+import { generateContent } from "./Utils/Model";
 
 function App() {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [FilteredResult, setFilteredResult] = useState(null);
+  const [AIAdvice, setAIAdvice] = useState("");
+  const [foodNutrients, setFoodNutrients] = useState([]);
 
   useEffect(() => {
     if (analysisResult && analysisResult.length > 0) {
@@ -39,6 +43,27 @@ function App() {
     );
   }
 
+  const handleAIResponse = async () => {
+    if (!FilteredResult || FilteredResult.length === 0) {
+      setAIAdvice("No food items detected to provide advice.");
+      return;
+    }
+
+    try {
+      const response = await generateContent(JSON.stringify(foodNutrients));
+      setAIAdvice(response);
+    } catch (error) {
+      console.error("Error generating AI response:", error);
+      setAIAdvice("Failed to generate AI response. Please try again later.");
+    }
+  };
+  // useEffect(() => {
+  //   // Reset analysis result and filtered result when the component mounts
+  //   setAnalysisResult(null);
+  //   setFilteredResult(null);
+  //   setAIAdvice("");
+  // }, []);
+
   return (
     <div>
       {/* Header Section */}
@@ -51,6 +76,13 @@ function App() {
           </p>
         </div>
       </header>
+
+      {/* Testing AI generated information */}
+      <div className="ai-advice">
+        <h2>AI Generated Advice</h2>
+        <button onClick={handleAIResponse}>AI response</button>
+        <p>{AIAdvice}</p>
+      </div>
 
       {/* Main Content */}
       <div className="container">
@@ -123,7 +155,11 @@ function App() {
                 </svg>
                 Nutritional Information
               </h3>
-              <NutrientExtractor foodData={analysisResult} />
+              <NutrientExtractor
+                foodData={analysisResult}
+                setFoodNutrients={setFoodNutrients}
+              />
+              {/* <ChatBot /> */}
             </div>
           </div>
         ) : (
