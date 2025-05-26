@@ -88,64 +88,337 @@ const NutrientExtractor = ({ foodData }) => {
     }
   };
 
-  if (loading)
-    return <div className="loading-message">Extracting nutrients...</div>;
-  if (error) return <div className="error-message">{error}</div>;
+  if (loading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "var(--space-4)",
+          padding: "var(--space-8)",
+        }}
+      >
+        <div className="loading-spinner"></div>
+        <div className="loading-text">Fetching nutritional data...</div>
+        <p
+          style={{
+            color: "var(--gray-500)",
+            fontSize: "0.875rem",
+            textAlign: "center",
+            margin: "0",
+          }}
+        >
+          Searching USDA database for detailed nutrition information
+        </p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="error-message">
+        <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div>
+          <strong>Unable to fetch nutrition data</strong>
+          <br />
+          {error}
+        </div>
+      </div>
+    );
+  }
+
   if (!nutrients) return null;
 
+  const formatValue = (value, unit = "") => {
+    if (value === "N/A" || value === null || value === undefined) {
+      return "N/A";
+    }
+    const numValue = typeof value === "number" ? value : parseFloat(value);
+    if (isNaN(numValue)) return "N/A";
+    return `${numValue.toFixed(1)}${unit}`;
+  };
+
+  const nutritionItems = [
+    {
+      label: "Serving Size",
+      value: nutrients.serving_size,
+      icon: "📏",
+      category: "basic",
+    },
+    {
+      label: "Calories",
+      value: formatValue(nutrients.calories, " kcal"),
+      icon: "🔥",
+      category: "energy",
+      highlight: true,
+    },
+    {
+      label: "Total Fat",
+      value: formatValue(nutrients.total_fat, "g"),
+      icon: "🥑",
+      category: "macros",
+    },
+    {
+      label: "Saturated Fat",
+      value: formatValue(nutrients.saturated_fat, "g"),
+      icon: "🧈",
+      category: "fats",
+    },
+    {
+      label: "Cholesterol",
+      value: formatValue(nutrients.cholesterol, "mg"),
+      icon: "❤️",
+      category: "fats",
+    },
+    {
+      label: "Sodium",
+      value: formatValue(nutrients.sodium, "mg"),
+      icon: "🧂",
+      category: "minerals",
+    },
+    {
+      label: "Carbohydrates",
+      value: formatValue(nutrients.carbohydrates, "g"),
+      icon: "🌾",
+      category: "macros",
+    },
+    {
+      label: "Fiber",
+      value: formatValue(nutrients.fiber, "g"),
+      icon: "🥬",
+      category: "carbs",
+    },
+    {
+      label: "Sugar",
+      value: formatValue(nutrients.sugar, "g"),
+      icon: "🍯",
+      category: "carbs",
+    },
+    {
+      label: "Protein",
+      value: formatValue(nutrients.protein, "g"),
+      icon: "💪",
+      category: "macros",
+    },
+  ];
+
   return (
-    <div className="nutrients-table">
-      <h3>Nutritional Information</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Nutrient</th>
-            <th>Value</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Serving Size</td>
-            <td>{nutrients.serving_size || "N/A"}</td>
-          </tr>
-          <tr>
-            <td>Calories</td>
-            <td>{nutrients.calories || "N/A"}</td>
-          </tr>
-          <tr>
-            <td>Total Fat</td>
-            <td>{nutrients.total_fat || "N/A"}</td>
-          </tr>
-          <tr>
-            <td>Saturated Fat</td>
-            <td>{nutrients.saturated_fat || "N/A"}</td>
-          </tr>
-          <tr>
-            <td>Cholesterol</td>
-            <td>{nutrients.cholesterol || "N/A"}</td>
-          </tr>
-          <tr>
-            <td>Sodium</td>
-            <td>{nutrients.sodium || "N/A"}</td>
-          </tr>
-          <tr>
-            <td>Carbohydrates</td>
-            <td>{nutrients.carbohydrates || "N/A"}</td>
-          </tr>
-          <tr>
-            <td>Fiber</td>
-            <td>{nutrients.fiber || "N/A"}</td>
-          </tr>
-          <tr>
-            <td>Sugar</td>
-            <td>{nutrients.sugar || "N/A"}</td>
-          </tr>
-          <tr>
-            <td>Protein</td>
-            <td>{nutrients.protein || "N/A"}</td>
-          </tr>
-        </tbody>
-      </table>
+    <div className="fade-in">
+      {/* Food Name */}
+      <div
+        style={{
+          marginBottom: "var(--space-6)",
+          textAlign: "center",
+          padding: "var(--space-4)",
+          background: "var(--primary-50)",
+          borderRadius: "var(--radius-lg)",
+          border: "1px solid var(--primary-200)",
+        }}
+      >
+        <h4
+          style={{
+            margin: "0",
+            fontSize: "1.125rem",
+            fontWeight: "600",
+            color: "var(--primary-800)",
+            textTransform: "capitalize",
+          }}
+        >
+          {nutrients.name}
+        </h4>
+        <p
+          style={{
+            margin: "var(--space-1) 0 0",
+            fontSize: "0.875rem",
+            color: "var(--primary-600)",
+          }}
+        >
+          Nutritional information per serving
+        </p>
+      </div>
+
+      {/* Nutrition Grid */}
+      <div className="nutrients-table">
+        <div
+          style={{
+            display: "grid",
+            gap: "var(--space-3)",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          }}
+        >
+          {nutritionItems.map((item, index) => (
+            <div
+              key={index}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "var(--space-4)",
+                background: item.highlight
+                  ? "var(--success-50)"
+                  : "var(--gray-50)",
+                borderRadius: "var(--radius-lg)",
+                border: `1px solid ${
+                  item.highlight ? "var(--success-200)" : "var(--gray-200)"
+                }`,
+                transition: "all 0.2s ease",
+              }}
+              className="nutrient-row"
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-3)",
+                }}
+              >
+                <span style={{ fontSize: "1.25rem" }}>{item.icon}</span>
+                <span
+                  className="nutrient-name"
+                  style={{
+                    fontWeight: "500",
+                    color: "var(--gray-900)",
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {item.label}
+                </span>
+              </div>
+              <span
+                className="nutrient-value"
+                style={{
+                  fontWeight: "600",
+                  color: item.highlight
+                    ? "var(--success-700)"
+                    : "var(--primary-700)",
+                  fontSize: "0.875rem",
+                }}
+              >
+                {item.value}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Nutrition Summary Cards */}
+      <div
+        style={{
+          marginTop: "var(--space-8)",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+          gap: "var(--space-4)",
+        }}
+      >
+        {/* Macros Summary */}
+        <div
+          style={{
+            padding: "var(--space-4)",
+            background: "var(--primary-50)",
+            borderRadius: "var(--radius-lg)",
+            border: "1px solid var(--primary-200)",
+            textAlign: "center",
+          }}
+        >
+          <h5
+            style={{
+              margin: "0 0 var(--space-2) 0",
+              fontSize: "0.875rem",
+              fontWeight: "600",
+              color: "var(--primary-800)",
+            }}
+          >
+            Macronutrients
+          </h5>
+          <div style={{ fontSize: "0.75rem", color: "var(--primary-600)" }}>
+            <div>Carbs: {formatValue(nutrients.carbohydrates, "g")}</div>
+            <div>Fat: {formatValue(nutrients.total_fat, "g")}</div>
+            <div>Protein: {formatValue(nutrients.protein, "g")}</div>
+          </div>
+        </div>
+
+        {/* Health Indicators */}
+        <div
+          style={{
+            padding: "var(--space-4)",
+            background: "var(--success-50)",
+            borderRadius: "var(--radius-lg)",
+            border: "1px solid var(--success-200)",
+            textAlign: "center",
+          }}
+        >
+          <h5
+            style={{
+              margin: "0 0 var(--space-2) 0",
+              fontSize: "0.875rem",
+              fontWeight: "600",
+              color: "var(--success-800)",
+            }}
+          >
+            Health Metrics
+          </h5>
+          <div style={{ fontSize: "0.75rem", color: "var(--success-600)" }}>
+            <div>Fiber: {formatValue(nutrients.fiber, "g")}</div>
+            <div>Sugar: {formatValue(nutrients.sugar, "g")}</div>
+            <div>Sodium: {formatValue(nutrients.sodium, "mg")}</div>
+          </div>
+        </div>
+
+        {/* Energy Info */}
+        <div
+          style={{
+            padding: "var(--space-4)",
+            background: "var(--warning-50)",
+            borderRadius: "var(--radius-lg)",
+            border: "1px solid var(--warning-200)",
+            textAlign: "center",
+          }}
+        >
+          <h5
+            style={{
+              margin: "0 0 var(--space-2) 0",
+              fontSize: "0.875rem",
+              fontWeight: "600",
+              color: "var(--warning-800)",
+            }}
+          >
+            Energy
+          </h5>
+          <div style={{ fontSize: "0.75rem", color: "var(--warning-600)" }}>
+            <div style={{ fontSize: "1rem", fontWeight: "600" }}>
+              {formatValue(nutrients.calories, " kcal")}
+            </div>
+            <div>Per {nutrients.serving_size}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Data Source */}
+      <div
+        style={{
+          marginTop: "var(--space-6)",
+          padding: "var(--space-3)",
+          background: "var(--gray-50)",
+          borderRadius: "var(--radius-md)",
+          textAlign: "center",
+          fontSize: "0.75rem",
+          color: "var(--gray-500)",
+        }}
+      >
+        <svg
+          width="14"
+          height="14"
+          fill="currentColor"
+          viewBox="0 0 24 24"
+          style={{ marginRight: "var(--space-1)" }}
+        >
+          <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Data sourced from USDA Food Data Central
+      </div>
     </div>
   );
 };
