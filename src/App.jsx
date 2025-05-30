@@ -3,24 +3,27 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Home from "./components/Home";
 import Login from "./components/Login";
 import Registeration from "./components/Registeration";
-import { ProtectedRoute } from "./Utils/ProtectedRoute";
+import ProtectedRoute from "./Utils/ProtectedRoute";
+import { AuthProvider } from "./context/AuthContext";
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Home />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Registeration />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <Home />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Registeration />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

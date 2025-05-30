@@ -1,31 +1,87 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { supabase } from "../config/supabase";
+import { useAuth } from "../context/AuthContext";
 
 const USDA_API_KEY = import.meta.env.VITE_USDA_API_KEY;
 
-const NutrientExtractor = ({ foodData, setFoodNutrients }) => {
+const NutrientExtractor = ({ FilteredResult, setFoodNutrients, imageUrl }) => {
   const [nutrients, setNutrients] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    if (foodData && foodData[0]) {
-      extractNutrients(foodData[0].label);
+    if (FilteredResult && FilteredResult[0]) {
+      extractNutrients(FilteredResult[0].label);
     }
-  }, [foodData]);
+  }, [FilteredResult]);
+
+  const saveFoodDetails = async (nutrientData, foodName, healthLabel) => {
+    try {
+      // Get the latest entry for this user to update it
+      const { data: existingEntries, error: fetchError } = await supabase
+        .from("FoodDetails")
+        .select("*")
+        .eq("id", user.id)
+        .eq("imagelink", imageUrl) // Match by image URL to update the correct entry
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // If entry exists, update it
+      if (existingEntries) {
+        const { error: updateError } = await supabase
+          .from("FoodDetails")
+          .update({
+            nutrientdetail: nutrientData,
+            ItemName: foodName,
+          })
+          .eq("id", user.id)
+          .eq("imagelink", imageUrl);
+
+        if (updateError) throw updateError;
+      } else {
+        // If no entry exists, create a new one
+        const { error: insertError } = await supabase
+          .from("FoodDetails")
+          .insert([
+            {
+              id: user.id,
+              created_at: new Date().toISOString().split("T")[0],
+              imagelink: imageUrl,
+              nutrientdetail: nutrientData,
+              ItemName: foodName,
+              health_label: healthLabel,
+            },
+          ]);
+
+        if (insertError) throw insertError;
+      }
+    } catch (err) {
+      console.error("Error saving nutrient details:", err);
+      setError("Failed to save nutrient details");
+    }
+  };
 
   const extractNutrients = async (foodName) => {
     setLoading(true);
     setError(null);
+    console.log("NutrientExtractor: Searching for food:", foodName);
 
     try {
+      // Clean up food name from DeiT model (remove any numbers or special formatting)
+      const searchTerm = foodName.replace(/\d+/g, "").trim();
+      console.log("NutrientExtractor: Cleaned search term:", searchTerm);
+
       const response = await axios.get(
         `https://api.nal.usda.gov/fdc/v1/foods/search`,
         {
           params: {
             api_key: USDA_API_KEY,
-            query: foodName,
-            dataType: "Survey (FNDDS)",
+            query: searchTerm,
+            dataType: ["Survey (FNDDS)", "Foundation", "SR Legacy"].join(","),
+            pageSize: 25, // Get more results to find better matches
           },
           headers: {
             "Content-Type": "application/json",
@@ -35,52 +91,69 @@ const NutrientExtractor = ({ foodData, setFoodNutrients }) => {
 
       if (response.status === 200) {
         const searchData = response.data;
+        console.log("NutrientExtractor: USDA API Response:", searchData);
 
         if (!searchData.foods || searchData.foods.length === 0) {
           throw new Error("No nutritional information found for this food");
         }
 
-        const food = searchData.foods[0];
+        // Try to find the best match
+        const bestMatch =
+          searchData.foods.find((f) =>
+            f.description.toLowerCase().includes(searchTerm.toLowerCase())
+          ) || searchData.foods[0];
+
+        console.log("NutrientExtractor: Best match found:", bestMatch);
 
         const nutrientData = {
-          name: food.description,
-          serving_size: food.servingSize ? `${food.servingSize}g` : "100g",
+          name: bestMatch.description,
+          serving_size: bestMatch.servingSize
+            ? `${bestMatch.servingSize}g`
+            : "100g",
           calories:
-            food.foodNutrients.find((n) => n.nutrientName === "Energy")
+            bestMatch.foodNutrients.find((n) => n.nutrientName === "Energy")
               ?.value || "N/A",
           total_fat:
-            food.foodNutrients.find(
+            bestMatch.foodNutrients.find(
               (n) => n.nutrientName === "Total lipid (fat)"
             )?.value || "N/A",
           saturated_fat:
-            food.foodNutrients.find(
+            bestMatch.foodNutrients.find(
               (n) => n.nutrientName === "Fatty acids, total saturated"
             )?.value || "N/A",
           cholesterol:
-            food.foodNutrients.find((n) => n.nutrientName === "Cholesterol")
-              ?.value || "N/A",
+            bestMatch.foodNutrients.find(
+              (n) => n.nutrientName === "Cholesterol"
+            )?.value || "N/A",
           sodium:
-            food.foodNutrients.find((n) => n.nutrientName === "Sodium, Na")
+            bestMatch.foodNutrients.find((n) => n.nutrientName === "Sodium, Na")
               ?.value || "N/A",
           carbohydrates:
-            food.foodNutrients.find(
+            bestMatch.foodNutrients.find(
               (n) => n.nutrientName === "Carbohydrate, by difference"
             )?.value || "N/A",
           fiber:
-            food.foodNutrients.find(
+            bestMatch.foodNutrients.find(
               (n) => n.nutrientName === "Fiber, total dietary"
             )?.value || "N/A",
           sugar:
-            food.foodNutrients.find(
+            bestMatch.foodNutrients.find(
               (n) => n.nutrientName === "Sugars, total including NLEA"
             )?.value || "N/A",
           protein:
-            food.foodNutrients.find((n) => n.nutrientName === "Protein")
+            bestMatch.foodNutrients.find((n) => n.nutrientName === "Protein")
               ?.value || "N/A",
         };
 
         setNutrients(nutrientData);
         setFoodNutrients(nutrientData); // Pass nutrients to parent component
+        console.log("Nutrient data:", nutrientData);
+
+        // Determine health label based on nutritional values
+        const healthLabel = determineHealthLabel(nutrientData);
+
+        // Save to database
+        await saveFoodDetails(nutrientData, bestMatch.description, healthLabel);
         console.log("Nutrient data extracted:", nutrientData);
       }
     } catch (err) {
@@ -88,6 +161,28 @@ const NutrientExtractor = ({ foodData, setFoodNutrients }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const determineHealthLabel = (nutrientData) => {
+    // Simple health determination based on nutritional values
+    const calories = parseFloat(nutrientData.calories);
+    const fat = parseFloat(nutrientData.total_fat);
+    const fiber = parseFloat(nutrientData.fiber);
+    const sugar = parseFloat(nutrientData.sugar);
+
+    if (
+      !isNaN(calories) &&
+      !isNaN(fat) &&
+      !isNaN(fiber) &&
+      !isNaN(sugar) &&
+      calories <= 400 &&
+      fat <= 10 &&
+      fiber >= 3 &&
+      sugar <= 10
+    ) {
+      return "Healthy";
+    }
+    return "UnHealthy";
   };
 
   if (loading) {

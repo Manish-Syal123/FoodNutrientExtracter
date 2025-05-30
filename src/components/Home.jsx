@@ -4,9 +4,9 @@ import ImageAnalyzer from "./ImageAnalyzer";
 import NutrientExtractor from "./NutrientExtractor";
 import ChatBot from "./ChatBot";
 import { generateContent } from "../Utils/Model";
-import { Link } from "react-router-dom";
-import { UserButton } from "@clerk/clerk-react";
-import { useUser } from "@clerk/clerk-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { supabase } from "../config/supabase";
 
 function Home() {
   const [analysisResult, setAnalysisResult] = useState(null);
@@ -14,39 +14,32 @@ function Home() {
   const [FilteredResult, setFilteredResult] = useState(null);
   const [AIAdvice, setAIAdvice] = useState("");
   const [foodNutrients, setFoodNutrients] = useState([]);
+  const [imageUrl, setImageUrl] = useState(null);
 
-  const { isSignedIn, user, isLoaded } = useUser();
-
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   useEffect(() => {
     if (analysisResult && analysisResult.length > 0) {
-      const result = analysisResult.filter(
-        (item) => (item.score * 100).toFixed(2) >= 95
-      );
-      setFilteredResult(result);
-      console.log("Analysis Result:", analysisResult);
-      console.log("Filtered Analysis Result:", result);
+      console.log("Home: Received Analysis Result:", analysisResult);
+
+      // Take top 3 results with highest confidence
+      const topResults = analysisResult
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 3);
+
+      console.log("Home: Top 3 Results:", topResults);
+      setFilteredResult(topResults);
     }
   }, [analysisResult]);
 
-  if (loading) {
-    return (
-      <div className="loading">
-        <div className="loading-spinner"></div>
-        <div className="loading-text">Analyzing your food image...</div>
-        <p
-          style={{
-            color: "var(--gray-500)",
-            fontSize: "0.875rem",
-            textAlign: "center",
-            maxWidth: "400px",
-          }}
-        >
-          Our AI is identifying the food items and preparing nutritional
-          analysis. This may take a few moments.
-        </p>
-      </div>
-    );
-  }
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate("/login");
+    } catch (error) {
+      console.error("Error signing out:", error.message);
+    }
+  };
 
   const handleAIResponse = async () => {
     if (!FilteredResult || FilteredResult.length === 0) {
@@ -62,171 +55,89 @@ function Home() {
       setAIAdvice("Failed to generate AI response. Please try again later.");
     }
   };
-  // useEffect(() => {
-  //   // Reset analysis result and filtered result when the component mounts
-  //   setAnalysisResult(null);
-  //   setFilteredResult(null);
-  //   setAIAdvice("");
-  // }, []);
+
+  if (loading) {
+    return (
+      <div className="loading">
+        <div className="loading-spinner"></div>
+        <div className="loading-text">Analyzing your food image...</div>
+        <p className="text-gray-500 text-sm text-center max-w-md mx-auto">
+          Our AI is identifying the food items and preparing nutritional
+          analysis. This may take a few moments.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <UserButton />
-      <br />
-      <Link to="/signup">SignUp</Link>
-      <br />
-      <Link to="/login">Login</Link>
-      <br />
-      <div>Hello {user.firstName}</div>
-      {/* Header Section */}
-      <header className="app-header">
-        <div className="header-content">
-          <h1 className="app-title">NutriVision AI</h1>
-          <p className="app-subtitle">
-            Instantly analyze food nutrition from photos using advanced AI
-            technology
-          </p>
+      {/* Header with User Profile */}
+      <div className="flex justify-between items-center p-4 bg-white shadow">
+        <div className="flex items-center space-x-4">
+          <h1 className="text-xl font-bold">NutriVision AI</h1>
+          <span className="text-gray-600">
+            Welcome, {user?.user_metadata?.name || "User"}
+          </span>
         </div>
-      </header>
-
-      {/* Testing AI generated information */}
-      <div className="ai-advice">
-        <h2>AI Generated Advice</h2>
-        <button onClick={handleAIResponse}>AI response</button>
-        <p>{AIAdvice}</p>
+        <button
+          onClick={handleSignOut}
+          className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+        >
+          Sign Out
+        </button>
       </div>
 
       {/* Main Content */}
-      <div className="container">
-        {/* Upload Section */}
-        <div className="upload-card fade-in">
-          <ImageAnalyzer
-            onAnalysisComplete={setAnalysisResult}
-            onLoading={setLoading}
-          />
+      <div className="container mx-auto px-4 py-8">
+        <header className="app-header">
+          <div className="header-content">
+            <h1 className="app-title">NutriVision AI</h1>
+            <p className="app-subtitle">
+              Instantly analyze food nutrition from photos using advanced AI
+              technology
+            </p>
+          </div>
+        </header>
+
+        {/* Analysis Components */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            {" "}
+            <ImageAnalyzer
+              setAnalysisResult={setAnalysisResult}
+              loading={loading}
+              setLoading={setLoading}
+              setImageUrl={setImageUrl}
+            />
+          </div>
+
+          {FilteredResult && (
+            <div className="bg-white p-6 rounded-lg shadow-md">
+              <NutrientExtractor
+                FilteredResult={FilteredResult}
+                setFoodNutrients={setFoodNutrients}
+                imageUrl={imageUrl}
+              />
+            </div>
+          )}
         </div>
 
-        {/* Results Section */}
-        {FilteredResult && FilteredResult.length > 0 ? (
-          <div className="results-container slide-up">
-            {/* Detection Results */}
-            <div className="result-section">
-              <h3 className="section-title">
-                <svg
-                  className="section-icon"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                Food Detection Results
-              </h3>
-              <div className="results-grid">
-                {FilteredResult.map((item, index) => (
-                  <div key={index} className="result-item">
-                    <div className="result-label">{item.label}</div>
-                    <div className="result-score">
-                      <svg
-                        width="16"
-                        height="16"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span className="confidence-badge">
-                        {(item.score * 100).toFixed(1)}% confidence
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Nutrition Information */}
-            <div className="nutrients-section">
-              <h3 className="section-title">
-                <svg
-                  className="section-icon"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                  />
-                </svg>
-                Nutritional Information
-              </h3>
-              <NutrientExtractor
-                foodData={analysisResult}
-                setFoodNutrients={setFoodNutrients}
-              />
-              {/* <ChatBot /> */}
-            </div>
+        {/* AI Advice Section */}
+        {foodNutrients && (
+          <div className="ai-advice mt-8 bg-white p-6 rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-4">AI Generated Advice</h2>
+            <button
+              onClick={handleAIResponse}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            >
+              Get AI Advice
+            </button>
+            {AIAdvice && <p className="mt-4 text-gray-700">{AIAdvice}</p>}
           </div>
-        ) : (
-          analysisResult && (
-            <div className="no-results fade-in">
-              <svg
-                width="48"
-                height="48"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-                style={{
-                  margin: "0 auto 1rem",
-                  display: "block",
-                  color: "var(--warning-500)",
-                }}
-              >
-                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-              <h3 style={{ margin: "0 0 0.5rem", color: "var(--warning-700)" }}>
-                No Food Items Detected
-              </h3>
-              <p>
-                We couldn't identify any food items with high confidence in this
-                image.
-              </p>
-              <p>
-                Please try uploading a clearer image with better lighting and
-                focus on the food.
-              </p>
-              <div
-                style={{
-                  marginTop: "1.5rem",
-                  padding: "1rem",
-                  background: "var(--warning-100)",
-                  borderRadius: "var(--radius-md)",
-                  fontSize: "0.875rem",
-                }}
-              >
-                <strong>Tips for better results:</strong>
-                <ul
-                  style={{
-                    textAlign: "left",
-                    margin: "0.5rem 0 0",
-                    paddingLeft: "1.25rem",
-                  }}
-                >
-                  <li>Ensure good lighting</li>
-                  <li>Focus clearly on the food</li>
-                  <li>Avoid cluttered backgrounds</li>
-                  <li>Show the food from a clear angle</li>
-                </ul>
-              </div>
-            </div>
-          )
         )}
+
+        {/* Chat Bot */}
+        <ChatBot />
       </div>
     </div>
   );

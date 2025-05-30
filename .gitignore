@@ -12,7 +12,9 @@ dist
 dist-ssr
 *.local
 .env
-
+.vscode
+mcp.json
+.vscode/mcp.json
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
